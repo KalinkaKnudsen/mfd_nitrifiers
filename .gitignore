@@ -1,4 +1,6 @@
 # Ignoring the data and graftM package folders
-data/**
-graftM_packages/**
+data/*.tsv
+data/*.txt
+
+graftM_packages/*/*.pkg
 
