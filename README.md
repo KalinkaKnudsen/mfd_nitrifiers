@@ -2,6 +2,10 @@
 This is a repo for the Microflora Danica Nitrifier section. 
 Link to biorxiv: https://www.biorxiv.org/content/10.1101/2024.06.27.600767v1
 
-Data is found at Zenodo: and is to be downloaded in the same folder as the scripts
+
+Scripts are provided for generating plots and data for the nitrifier section
+Data is found at Zenodo: https://doi.org/10.5281/zenodo.12605769 
+GraftM packages are found at Zenodo: https://doi.org/10.5281/zenodo.12605769 
+
 
 Intermediate files are generated, and indicated where used
