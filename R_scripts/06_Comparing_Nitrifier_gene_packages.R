@@ -1,6 +1,6 @@
 #title: "06_Comparing_Nitrifier_gene_packages"
 #author: "Kalinka Sand Knudsen"
-#update: "2024-07-31"
+#update: "2025-04-24"
 
 
 #Loading packages
@@ -16,28 +16,28 @@ library(ggh4x)
 setwd("path_to_working_directory")
 
 ## Importing dataframes
-cNXR_old<-vroom("cNXR_old_combined_count_table_e10.txt", delim="\t")%>%
+cNXR_old<-vroom("data/cNXR_old_combined_count_table_e10.txt", delim="\t")%>%
   rename(OTU = ConsensusLineage)  %>%
   filter(grepl("Root; cNarG_Nxr; Nitrobacter_Nitrococcus", OTU)) %>%
   pivot_longer(starts_with("LIB"), names_to = "SeqId", values_to="Read_count")%>%
   mutate(Package="- MFD")%>%
   mutate(Group="Nitrobacter-\nlike nxrA")
 
-cNXR_new<-vroom("cNXR_combined_count_table_e10.txt", delim="\t")%>%
+cNXR_new<-vroom("data/cNXR_combined_count_table_e10.txt", delim="\t")%>%
   rename(OTU = ConsensusLineage)  %>%
   filter(grepl("Root; cNarG_Nxr; Nitrococcus_Nitrobacter_clade", OTU))%>%
  pivot_longer(starts_with("LIB"), names_to = "SeqId", values_to="Read_count")%>%
   mutate(Package="+ MFD")%>%
   mutate(Group="Nitrobacter-\nlike nxrA")
 
-Arc_old<-vroom("arch_AmoA_old_combined_count_table_e10.txt", delim="\t")%>%
+Arc_old<-vroom("data/arch_AmoA_old_combined_count_table_e10.txt", delim="\t")%>%
   rename(OTU = ConsensusLineage)  %>%
   filter(grepl("Root; Nitrososphaerales; Nitrososphaeraceae", OTU))%>%
   pivot_longer(starts_with("LIB"), names_to = "SeqId", values_to="Read_count")%>%
   mutate(Package="- MFD")%>%
   mutate(Group="Nitrososphaeraceae-\namoA")
 
-Arc_new<-vroom("arch_AmoA_combined_count_table_e10.txt", delim="\t")%>%
+Arc_new<-vroom("data/arch_AmoA_combined_count_table_e10.txt", delim="\t")%>%
   rename(OTU = ConsensusLineage)  %>%
   filter(grepl("Root; o_Nitrososphaerales; f_Nitrososphaeraceae", OTU))%>%
   pivot_longer(starts_with("LIB"), names_to = "SeqId", values_to="Read_count")%>%
@@ -51,17 +51,18 @@ comb<-rbind(cNXR_old, cNXR_new)%>%
   rbind(Arc_new)
 
 ##### Importing and merging metadata
-linkage <- vroom("2023-10-11_samples_minimal_metadata_collapsed.csv", delim = ",") %>%
+linkage <- vroom("metadata/2023-10-11_samples_minimal_metadata_collapsed.csv", delim = ",") %>%
   mutate(flat_name=gsub(".fastq.gz","", flat_name))%>%
   rename(SeqId = flat_name) %>%
   relocate(SeqId)%>%
-  select(SeqId, fieldsample_barcode)
+  select(SeqId, fieldsample_barcode, after_total_reads)
 
-metadata.sub <- readxl::read_excel('2024-02-13_mfd_db.xlsx') %>%
+metadata.sub <- readxl::read_excel('metadata/2025-02-19_mfd_db.xlsx') %>%
   left_join(linkage)%>%
   relocate(SeqId)%>%
-  select(SeqId:mfd_hab3) %>%
-  mutate(complex = str_c(mfd_sampletype, mfd_areatype, mfd_hab1, sep = ", "))
+  select(SeqId:mfd_hab3, after_total_reads) %>%
+  mutate(complex = str_c(mfd_sampletype, mfd_areatype, mfd_hab1, sep = ", "))%>%
+    filter(after_total_reads>500000)
 
 d<-comb%>%
   left_join(metadata.sub)%>%
@@ -97,19 +98,23 @@ mutate(across(mfd_hab1, ~str_replace(., "Sclerophyllous scrub", "Temperate heath
   mutate(mfd_hab2 = if_else(grepl("Oak", mfd_hab2), "Oak", mfd_hab2)) %>%
   mutate(mfd_hab2 = if_else(complex == "Sediment\nUrban\nFreshwater", paste0(mfd_hab3), paste0(mfd_hab2)))%>%
   filter(!mfd_hab2 %in% c("Enclosed water, Dried", "Birch", "Pine", "Mire (non-habitat type)"))%>%
-  mutate(mfd_hab2 = if_else(is.na(mfd_hab2) & complex == "Soil\nNatural\nForests", paste0(mfd_hab1, " - no MFDO2"), mfd_hab2)) %>%
-  mutate(mfd_hab2 = if_else(mfd_hab2=="NA" & complex == "Soil\nNatural\nForests", paste0(mfd_hab1, " - no MFDO2"), mfd_hab2)) %>%
+  mutate(mfd_hab2 = if_else(is.na(mfd_hab2) & complex == "Soil\nNatural\nForests", paste0(mfd_hab1, "\nno MFDO2"), mfd_hab2)) %>%
+  mutate(mfd_hab2 = if_else(mfd_hab2=="NA" & complex == "Soil\nNatural\nForests", paste0(mfd_hab1, "\nno MFDO2"), mfd_hab2)) %>%
   filter(!is.na(mfd_hab2))%>%
   filter(!mfd_hab2=="NA")%>%
-  filter(!mfd_hab2=="Mire")%>%
+  filter(!mfd_hab2 %in% c("Mire", "Spruce", "Willow"))%>%
+  mutate(mfd_hab2=gsub("\\s*\\(exotic\\)", "", mfd_hab2))%>%
+  mutate(mfd_hab2=gsub("Standing freshwater", "Standing\nfreshwater", mfd_hab2))%>%
+  mutate(mfd_hab2=gsub("Running freshwater", "Running\nfreshwater", mfd_hab2))%>%
+  mutate(mfd_hab2=gsub("Activated sludge", "Activated\nsludge", mfd_hab2))%>%
   mutate(Read_count=if_else(is.na(Read_count), 0, Read_count))%>%
   mutate(Tax_curated=gsub("Root; cNarG_Nxr; Nitrobacter_Nitrococcus; ","", OTU))%>%
   mutate(Tax_curated=gsub("Root; cNarG_Nxr; Nitrobacter_Nitrococcus","Nitrobacter_Nitrococcus_umbrella", Tax_curated))%>%
   mutate(Tax_curated=gsub("Root; cNarG_Nxr; Nitrococcus_Nitrobacter_clade; ","", Tax_curated))%>%
   mutate(Tax_curated=gsub("Root; cNarG_Nxr; Nitrococcus_Nitrobacter_clade","Nitrobacter_Nitrococcus_umbrella", Tax_curated))%>%
   mutate(Tax_curated=gsub("Root; Nitrososphaerales; ","", Tax_curated))%>%
-  mutate(Tax_curated=gsub("Root; o_Nitrososphaerales; ","", Tax_curated))
-
+  mutate(Tax_curated=gsub("Root; o_Nitrososphaerales; ","", Tax_curated))%>%
+  filter(after_total_reads>500000)
 
 #### Converting OTU to wide format for clustering
 all_groups_wide <- d %>%
@@ -127,8 +132,8 @@ all_groups_wide <- d %>%
   level<- hclust_ward$labels[order.dendrogram(ward_dendrogram)]
   
 
-  
-### Plotting a heatmap
+## plotting
+ 
 heat <- d %>%
     mutate(SeqId = factor(SeqId, levels = level, ordered = TRUE)) %>%
     mutate(complex=gsub("Soil\nNatural\nBogs, mires and fens", "Soil\nNatural\nBogs and\nfens", complex))%>%
@@ -136,23 +141,33 @@ heat <- d %>%
     filter(!complex=="Water\nUrban\nWastewater")%>%
     #arrange(SeqId) %>% 
     ggplot(aes(y = Tax_curated, x = SeqId, fill = Read_count)) +
-      geom_tile(width=10.0, linewidth=0.0) +
-    scale_fill_viridis_c(name = "Read count\n", trans = "sqrt", limits = c(0, 100), na.value = "#F8E622")+
-   # scale_fill_gradient(low = "white", high = "darkred",  na.value = "darkred", name = "RPKM", trans = "sqrt", limits = c(0.00, 3)) +
+    geom_tile() +
+    scale_fill_gradientn(
+    name = "Read\ncount",  # The label
+    colors = c( "white","#82A3CD", "darkorange", "darkred", "black"),  
+    trans = "sqrt",  # Same as in viridis
+    limits = c(0.00, 100),  # Set the limits manually
+    na.value = "black"  # Handling values larger than the limit
+  ) +
     labs(x = "", y = "") +
     theme_minimal() +
-    theme(axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          #axis.text.y = element_blank(),
-          axis.text.y = element_text(size = 35),
-          strip.placement = "outside",
-          legend.position = "right",
-          strip.text = element_text(size = 40, face = "bold"),
-          strip.background = element_rect(fill = "grey90", color = "white"),
-          legend.key.size = unit(2, 'cm'),
-          legend.title = element_text(size=35, hjust=0.9, vjust=0.9),
-          #legend.position=c(0.85, 0.3),
-          legend.text = element_text(size=35))+
+   theme(axis.text.x = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        #  axis.text.y = element_blank(),
+        axis.text.y = element_text(size = 7),
+        legend.key.size = unit(0.38, "cm"),
+        legend.title = element_text(size=7.5),
+        legend.text = element_text(size=7),
+        strip.clip = "off",
+        strip.text.x = element_text(size = 7, face="bold"),  # Size for x-axis facet labels
+        strip.text.y = element_text(size = 7, face="bold"),
+        panel.border = element_rect(colour="black", fill=NA, linewidth = 0.2) ,
+        strip.background = element_blank(),
+      #  text = element_text(family = "Arial"),
+        plot.background = element_rect(fill = "transparent"),
+        panel.spacing = unit(0.15, "lines", data = NULL))+
+  theme(plot.margin = unit(c(0,0,0,0), "cm"))+
       facet_nested(Group+Package ~ complex, scales = "free", space = "free") +
    scale_y_discrete(expand = c(0,0))
   
@@ -160,39 +175,29 @@ heat <- d %>%
 heat
   
 
-ggsave("./HM_comparing_packs.png",
+ggsave("output/Supplemenatry_package_update.png",
        heat,
-        height = 10,
-  width = 25)
+        height = 8,
+  width = 20, dpi=600)
 
-ggsave("./HM_comparing_packs.svg",
+ggsave("output/Supplemenatry_package_update.svg",
        heat,
-        height = 10,
-  width = 25)
+        height = 8,
+  width = 20)
 
 
-ggsave("./HM_comparing_packs.svg",
-       heat,
-        height = 10,
-  width = 25)
-
-tiff(file = 'Supplemenatry_package_update.tiff',
-    height = 1900,
-    width = 5500) 
+tiff(file = 'output/Supplemenatry_package_update.tiff',
+    height = 8,
+  width = 20, res=600, units="in")
 heat
 dev.off()
 
 
-pdf(file = 'Supplemenatry_package_update.pdf',
-    height = 30,
-    width = 90) 
+pdf(file = 'output/Supplemenatry_package_update.pdf',
+    height = 8,
+    width = 20) 
 heat
 dev.off()
-
-
-
-
-
 
 
 

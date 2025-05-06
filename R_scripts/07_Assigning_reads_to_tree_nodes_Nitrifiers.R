@@ -1,6 +1,6 @@
-#title: "04_Assigning_reads_to_tree_nodes_Nitrifiers"
+#title: "07_Assigning_reads_to_tree_nodes_Nitrifiers"
 #author: "Kalinka Sand Knudsen"
-#update: "2024-07-30"
+#update: "2025-04-24"
 
 
 #Loading packages
@@ -21,7 +21,7 @@ setwd("path_to_working_directory")
 label_max<-37
 
 #Importing the allocation of reads to each tree node
-cNXR<-vroom("cNXR_positions_of_hits.tsv", delim = "\t")
+cNXR<-vroom("data/cNXR_positions_of_hits.tsv", delim = "\t")
 
 #Investigating the Nitrobacter clade
 Nitrobacter_new <- cNXR %>%
@@ -99,14 +99,14 @@ ggplot(., aes(x = Position, y = Tax, fill = Tax, height=Count)) +
         axis.text.y = element_text(size=12, color="grey10"),
         text = element_text(family = "Arial"))
 
-ggsave("Nitrobacter_coverage.svg",
+ggsave("output/Nitrobacter_coverage.svg",
        Nitrobacter_cov_plot,
        height = 3.5,
        width = 8)
 
 
 
-arch_AmoA<-vroom("arch_AmoA_positions_of_hits.tsv", delim = "\t")
+arch_AmoA<-vroom("data/arch_AmoA_positions_of_hits.tsv", delim = "\t")
 
 
 ### Investigating Nitrososphaeraceae
@@ -196,7 +196,7 @@ Nitrososphaeraceae_cov_plot<-result_data %>%
 Nitrososphaeraceae_cov_plot
 
 
-ggsave("Nitrososphaeraceae_coverage.svg",
+ggsave("output/Nitrososphaeraceae_coverage.svg",
        Nitrososphaeraceae_cov_plot,
        height = 2.8,
        width = 7)

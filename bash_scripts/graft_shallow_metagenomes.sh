@@ -86,7 +86,7 @@ rm -r $odir_pos/tax_file_sorted.tsv $odir_pos/hmm_hit_file_sorted.tsv $odir_pos/
 echo "position files finished"
 
 ##### Then, making quick coverage profiles ###
-Rscript $WD/coverage_profiles.R "$WD"
+Rscript $WD/R_scripts/coverage_profiles.R "$WD"
 
 
 
